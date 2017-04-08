@@ -34,6 +34,7 @@ unsigned long _noOns[STOP_SEQUENCE + 1];
 unsigned long _noOffs[STOP_SEQUENCE + 1];
 bool _buttonPushed[STOP_SEQUENCE + 1];
 bool _buttonsEnabled[STOP_SEQUENCE + 1];
+bool _manuallySetNumberOfArrows;
 
 enum RotarySwitches {
 	ARROWS_THREE = 22,
@@ -42,23 +43,8 @@ enum RotarySwitches {
 	SEQUENCE_ABCD_CDAB = 25,
 	SEQUENCE_ABCD_ABCD = 26
 } _rotarySwitches;
-int _switchStates[SEQUENCE_ABCD_ABCD + 1];
 
-/*
- void handleButtonPushes();
- void performAction(int);
- void sendResetSequence();
- void sendGreenLightOn();
- void sendYellowLightOn();
- void sendRedLightOn();
- void sendSoundSignal();
- void sendStartSequence();
- void sendPauseSequence();
- void sendStopSequence();
- void updateStatus(int);
- void decreaseNoArrows();
- void changeABCD();
- */
+int _switchStates[SEQUENCE_ABCD_ABCD + 1];
 
 enum AbcdLight {
 	AB = 0, CD = 1
@@ -80,6 +66,7 @@ struct Status {
 Status _status;
 
 void setup() {
+	_manuallySetNumberOfArrows = false;
 	_command.state = EMPTY;
 	_command.byteCounter = 0;
 	for (int i = 0; i < MAX_COMMAND_LENGTH; i++) {
@@ -94,12 +81,10 @@ void setup() {
 
 	for (int i = ABCD_CHANGE; i <= STOP_SEQUENCE; i++) {
 		pinMode(i, INPUT);
-		// test false
 		_buttonsEnabled[i] = true;
 	}
 
 	for (int i = ARROWS_THREE; i <= SEQUENCE_ABCD_ABCD; i++) {
-		// test false
 		_buttonsEnabled[i] = true;
 		pinMode(i, INPUT);
 	}
@@ -216,7 +201,10 @@ void doCommand(struct Command * commandP) {
 		break;
 	case 'R':
 		_status.sequenceIsRunning = commandP->receiveBuffer[1] == '1';
-		if (commandP->receiveBuffer[1] == '0') {
+		if (_status.sequenceIsRunning){
+			_manuallySetNumberOfArrows = false;
+		}
+		if (commandP->receiveBuffer[1] == '0' && !_manuallySetNumberOfArrows) {
 			setDefaultNumberOfArrows();
 		}
 		break;
@@ -261,6 +249,7 @@ void performAction(int buttonPushed) {
 		break;
 	case DECREASE_ARROWS:
 		if (!_status.sequenceIsRunning) {
+			_manuallySetNumberOfArrows = true;
 			decreaseNoArrows();
 		}
 		break;

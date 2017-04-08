@@ -42,13 +42,18 @@ struct Sequence {
 	long timeShootingCountdown;
 	int timeShootingCountdownSeconds; //
 	bool timeShootingCountdownSecondsChangedPulse = false; //
+	long timeWaitingCountdown;
+	int timeWaitingCountdownSeconds; //
+	bool timeWaitingCountdownSecondsChangedPulse = false; //
 	bool isShooting = false; //
 	bool isShootingChangedPulse = false; //
 	bool sequenceIsRunningChangedPulse = false;
 	int arrowsToShoot;
 	int noArrowsLeft; //
 	bool noArrowsChangedPulse = false; //
-	bool changedABCDPulse = false;bool shootingPaused = false;
+	bool changedABCDPulse = false; //
+	bool shootingPaused = false; //
+	bool isInWaitingCountdown = false;
 };
 
 struct Sound {
@@ -90,8 +95,8 @@ struct Sound _sound;
 char _singleRoundTemplate[9 * 7] = { //
 		'E', ' ', ' ', '0', '\0', ' ', ' ', // Start
 				'B', ' ', ' ', '0', '\0', ' ', ' ', // Two sound signals
-				'R', ' ', '1', '0', '\0', ' ', ' ', // Red light for 10 seconds
-				'A', ' ', ' ', '0', '\0', ' ', ' ', // One sound signals
+				'W', ' ', '1', '0', '\0', ' ', ' ', // Red light for 10 seconds with countdown
+				'A', ' ', ' ', '0', '\0', ' ', ' ', // One sound signal
 				'G', 'T', 'T', 'T', '\0', 'I', ' ', // Green light for TTT seconds, interruptable
 				'Y', ' ', '3', '0', '\0', 'I', 'S', // Yellow light for 30 seconds, interruptable, skipable
 				'R', ' ', ' ', '0', '\0', ' ', ' ', // Red light
@@ -102,14 +107,14 @@ char _singleRoundTemplate[9 * 7] = { //
 char _doubleRoundTemplate[15 * 7] = { //
 		'E', ' ', ' ', '0', '\0', ' ', ' ', // Start
 				'B', ' ', ' ', '0', '\0', ' ', ' ', // Two sound signals
-				'R', ' ', '1', '0', '\0', ' ', ' ', // Red light for 10 seconds
-				'A', ' ', ' ', '0', '\0', ' ', ' ', // One sound signals
+				'W', ' ', '1', '0', '\0', ' ', ' ', // Red light for 10 seconds with countdown
+				'A', ' ', ' ', '0', '\0', ' ', ' ', // One sound signal
 				'G', 'T', 'T', 'T', '\0', 'I', ' ', // Green light for TTT seconds, interruptable
 				'Y', ' ', '3', '0', '\0', 'I', 'S', // Yellow light for 30 seconds, interruptable, skipable
 				'B', ' ', ' ', '0', '\0', ' ', ' ', // Two sound signals
 				'S', ' ', ' ', '0', '\0', ' ', ' ', // Switch AB-CD
-				'R', ' ', '1', '0', '\0', ' ', ' ', // Red light for 10 seconds
-				'A', ' ', ' ', '0', '\0', ' ', ' ', // One sound signals
+				'W', ' ', '1', '0', '\0', ' ', ' ', // Red light for 10 seconds with countdown
+				'A', ' ', ' ', '0', '\0', ' ', ' ', // One sound signal
 				'G', 'T', 'T', 'T', '\0', 'I', ' ', // Green light for TTT seconds, interruptable
 				'Y', ' ', '3', '0', '\0', 'I', 'S', // Yellow light for 30 seconds, interruptable, skipable
 				'R', ' ', ' ', '0', '\0', ' ', ' ', // Red light
@@ -178,8 +183,8 @@ void loop() {
 }
 
 void sendMessages(struct Sequence *sequence) {
-	bool periodicStatusPulse = _t - _timeOfLastStatus > 2000;
-	if (periodicStatusPulse){
+	bool periodicStatusPulse = _t - _timeOfLastStatus > 1000;
+	if (periodicStatusPulse) {
 		Serial.print("       Periodic status pulse");
 	}
 	if (periodicStatusPulse) {
@@ -187,7 +192,8 @@ void sendMessages(struct Sequence *sequence) {
 	}
 
 	// Time count down message
-	if (periodicStatusPulse || sequence->timeShootingCountdownSecondsChangedPulse) {
+	if (periodicStatusPulse
+			|| sequence->timeShootingCountdownSecondsChangedPulse) {
 		sequence->timeShootingCountdownSecondsChangedPulse = false;
 		sendTimeCountdown(sequence);
 	}
@@ -217,7 +223,7 @@ void sendMessages(struct Sequence *sequence) {
 	}
 }
 
-void sendTimeCountdown(Sequence *sequenceP){
+void sendTimeCountdown(Sequence *sequenceP) {
 	int t = sequenceP->timeShootingCountdownSeconds;
 	t = t < 0 ? 0 : t;
 	t = t > 240 ? 240 : t;
@@ -284,13 +290,13 @@ void sendIsShootingStatus(Sequence *sequenceP) {
 void sendRunningStatus(Sequence *sequenceP) {
 	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write('R');
-	if (sequenceP->state == FINISHED || sequenceP->state == NONE){
+	if (sequenceP->state == FINISHED || sequenceP->state == NONE) {
 		Serial.println("### Send message ### R0 (sequence is not running)");
 		_rs485Serial.write('0');
-	}else if (sequenceP->state == RUNNING) {
+	} else if (sequenceP->state == RUNNING) {
 		_rs485Serial.write('1');
 		Serial.println("### Send message ### R1 (sequence running)");
-	} else if (sequenceP->state == PAUSED){
+	} else if (sequenceP->state == PAUSED) {
 		_rs485Serial.write('P');
 		Serial.println("### Send message ### RP (sequence paused)");
 	}
@@ -310,6 +316,9 @@ void updateTimes(struct Sequence *sequenceP) {
 	if (sequenceP->isShooting) {
 		sequenceP->timeShootingCountdown -= (long) _dt;
 	}
+	if (sequenceP->isInWaitingCountdown) {
+		sequenceP->timeWaitingCountdown -= (long) _dt;
+	}
 }
 
 void updateCommand(struct Command *cP) {
@@ -323,14 +332,6 @@ void updateCommand(struct Command *cP) {
 	}
 
 	char byteReceived = (char) _rs485Serial.read();
-
-	// For debuging
-	//Serial.print("Byte received: ");
-	//if (byteReceived > 0){
-	//	Serial.println(byteReceived);
-	//}else{
-	//	Serial.println("end mark");
-	//}
 
 	++cP->byteCounter;
 	if (cP->byteCounter == 1) {
@@ -442,6 +443,12 @@ void doRecord(char* record) {
 		_sequence.timeShootingCountdown = _sequence.arrowsToShoot * 40e3;
 		redLightOn();
 		break;
+	case 'W':
+		_sequence.isShootingChangedPulse = _sequence.isShooting;
+		_sequence.isShooting = false;
+		_sequence.timeShootingCountdown = _sequence.arrowsToShoot * 40e3;
+		_sequence.timeWaitingCountdown = getRecordDuration(record);
+		break;
 	case 'S':
 		switchABCD();
 		break;
@@ -451,6 +458,8 @@ void doRecord(char* record) {
 	case 'Z':
 		endSequence();
 	}
+
+	_sequence.isInWaitingCountdown = task == 'r';
 }
 
 void switchABCD() {
@@ -487,19 +496,6 @@ void lightsOff() {
 void endSequence() {
 	Serial.println("End sequence");
 	resetToDefault();
-	/*
-	 _sequence.noArrowsLeft = 0;
-	 _sequence.noArrowsChangedPulse = _sequence.noArrowsLeft > 0;
-	 _sequence.state = FINISHED;
-	 _sequence.noArrowsChangedPulse = _sequence.noArrowsLeft > 0;
-	 _sequence.noArrowsLeft = 0;
-	 _sequence.isShootingChangedPulse = _sequence.isShooting;
-	 _sequence.isShooting = false;
-	 _sequence.timeShootingCountdown = 0;
-	 _sequence.timeShootingCountdownSecondsChangedPulse = true;
-	 _sequence.sequenceIsRunningChangedPulse = true;
-	 redLightOn();
-	 */
 }
 
 void doCommand(struct Command * commandP, struct Sequence * sequenceP) {
@@ -713,5 +709,9 @@ void resetToDefault() {
 	_sequence.timeShootingCountdown = 0;
 	_sequence.timeShootingCountdownSeconds = 0;
 	_sequence.timeShootingCountdownSecondsChangedPulse = true;
+	_sequence.timeWaitingCountdown = 0;
+	_sequence.timeWaitingCountdownSeconds = 0;
+	_sequence.timeWaitingCountdownSecondsChangedPulse = true;
+
 	_sequence.shootingPaused = false;
 }
