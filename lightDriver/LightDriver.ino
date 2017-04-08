@@ -1,6 +1,7 @@
 /*-----( Import needed libraries )-----*/
 #include <Arduino.h>
 #include <SoftwareSerial.h>
+#include "ReceivingCommand.h"
 
 /*-----( Declare Constants and Pin Numbers )-----*/
 #define RedPinOut       2
@@ -27,19 +28,24 @@
 
 SoftwareSerial _rs485Serial(SSerialRX, SSerialTX); // RX, TX
 
-enum CommandState {
-	EMPTY, RECEIVING, NEW_RECEIVED
-};
+/*
+ enum CommandState {
+ EMPTY, RECEIVING, NEW_RECEIVED
+ };
+ */
+
 enum SequenceState {
 	NONE, RUNNING, INTERRUPTED, PAUSED, FINISHED
 };
 
-struct Command {
-	enum CommandState state = EMPTY;
-	int byteCounter = 0;
-	char receiveBuffer[MAX_COMMAND_LENGTH] = "";
-	unsigned long startReceivingTime;
-};
+/*
+ struct Command {
+ enum CommandState state = EMPTY;
+ int byteCounter = 0;
+ char receiveBuffer[MAX_COMMAND_LENGTH] = "";
+ unsigned long startReceivingTime;
+ };
+ */
 
 struct Sequence {
 	enum SequenceState state = NONE;
@@ -161,6 +167,12 @@ unsigned long _tPrev;
 unsigned long _t;
 
 void setup() {
+	_command.state = EMPTY;
+	_command.byteCounter = 0;
+	for (int i = 0; i < MAX_COMMAND_LENGTH; i++) {
+		_command.receiveBuffer[i] = '\0';
+	}
+
 	// Start the built-in serial port, probably to Serial Monitor
 	Serial.begin(9600);
 

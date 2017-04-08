@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
+#include "ReceivingCommand.h"
 
 #define SSerialRX        10  //Serial Receive pin
 #define SSerialTX        11  //Serial Transmit pin
@@ -7,23 +8,12 @@
 #define SSerialTxControl 9   //RS485 Direction control
 #define RS485Transmit    HIGH
 #define RS485Receive     LOW
-#define MAX_COMMAND_LENGTH 	8
 
 #define ArrowLedPinStart 3
 #define ArrowLedPinEnd 8
 
 SoftwareSerial _rs485Serial(SSerialRX, SSerialTX); // RX, TX
 
-enum CommandState {
-	EMPTY, RECEIVING, NEW_RECEIVED
-};
-
-struct Command {
-	enum CommandState state = EMPTY;
-	int byteCounter = 0;
-	char receiveBuffer[MAX_COMMAND_LENGTH] = "";
-	unsigned long startReceivingTime;
-};
 struct Command _command;
 
 #define PUSH_STEPS 100
@@ -90,6 +80,12 @@ struct Status {
 Status _status;
 
 void setup() {
+	_command.state = EMPTY;
+	_command.byteCounter = 0;
+	for (int i = 0; i < MAX_COMMAND_LENGTH; i++){
+		_command.receiveBuffer[i] = '\0';
+	}
+
 	Serial.begin(9600);
 
 	for (int i = ARROWS_THREE; i <= SEQUENCE_ABCD_ABCD; i++) {
@@ -121,7 +117,7 @@ void loop() {
 	_c++;
 
 	// Read command
-	updateCommand(&_command);
+	updateCommand(&_command, &_rs485Serial);
 
 	// Do received command
 	if (_command.state == NEW_RECEIVED) {
@@ -188,42 +184,6 @@ void handleSwitches() {
 		if (_switchStates[s] && !prevState) {
 			updateStatus(s);
 		}
-	}
-}
-
-void updateCommand(struct Command *cP) {
-
-	if (millis() - cP->startReceivingTime > 200) {
-		resetCommand(cP);
-	}
-
-	if (_rs485Serial.available() == 0) {
-		return;
-	}
-
-	char byteReceived = (char) _rs485Serial.read();
-
-	// For debuging
-	//Serial.print("Byte received: ");
-	//if (byteReceived > 0){
-	//	Serial.println(byteReceived);
-	//}else{
-	//	Serial.println("end mark");
-	//}
-
-	++cP->byteCounter;
-	if (cP->byteCounter == 1) {
-		cP->startReceivingTime = millis();
-	}
-
-	boolean commandEnd = (byteReceived == 0
-			|| cP->byteCounter == MAX_COMMAND_LENGTH);
-	if (commandEnd) {
-		cP->receiveBuffer[cP->byteCounter - 1] = '\0';
-		cP->state = NEW_RECEIVED;
-	} else {
-		cP->receiveBuffer[cP->byteCounter - 1] = byteReceived;
-		cP->state = RECEIVING;
 	}
 }
 
@@ -452,3 +412,40 @@ void sendStopSequence() {
 		_status.numberOfArrows = 6;
 	}
 }
+
+void updateCommand(struct Command *cP, SoftwareSerial *rs485SerialP) {
+
+	if (millis() - cP->startReceivingTime > 200) {
+		resetCommand(cP);
+	}
+
+	if (rs485SerialP->available() == 0) {
+		return;
+	}
+
+	char byteReceived = (char) rs485SerialP->read();
+
+	// For debuging
+	//Serial.print("Byte received: ");
+	//if (byteReceived > 0){
+	//	Serial.println(byteReceived);
+	//}else{
+	//	Serial.println("end mark");
+	//}
+
+	++cP->byteCounter;
+	if (cP->byteCounter == 1) {
+		cP->startReceivingTime = millis();
+	}
+
+	boolean commandEnd = (byteReceived == 0
+			|| cP->byteCounter == MAX_COMMAND_LENGTH);
+	if (commandEnd) {
+		cP->receiveBuffer[cP->byteCounter - 1] = '\0';
+		cP->state = NEW_RECEIVED;
+	} else {
+		cP->receiveBuffer[cP->byteCounter - 1] = byteReceived;
+		cP->state = RECEIVING;
+	}
+}
+

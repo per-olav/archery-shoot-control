@@ -12,7 +12,7 @@
  C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\variants\mega/pins_arduino.h \
  C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\libraries\SoftwareSerial\src/SoftwareSerial.h \
  C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\cores\arduino/Stream.h \
- ../ShootControlPanel.ino
+ ../ReceivingCommand.h ../ShootControlPanel.ino
 
 C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\cores\arduino/Arduino.h:
 
@@ -39,5 +39,7 @@ C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\
 C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\libraries\SoftwareSerial\src/SoftwareSerial.h:
 
 C:\eclipse\java-neon\eclipse\arduinoPlugin\packages\arduino\hardware\avr\1.6.17\cores\arduino/Stream.h:
+
+../ReceivingCommand.h:
 
 ../ShootControlPanel.ino:
