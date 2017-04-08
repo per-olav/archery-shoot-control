@@ -82,7 +82,7 @@ Status _status;
 void setup() {
 	_command.state = EMPTY;
 	_command.byteCounter = 0;
-	for (int i = 0; i < MAX_COMMAND_LENGTH; i++){
+	for (int i = 0; i < MAX_COMMAND_LENGTH; i++) {
 		_command.receiveBuffer[i] = '\0';
 	}
 
@@ -197,15 +197,18 @@ void doCommand(struct Command * commandP) {
 	int noArrowsLeft;
 	switch (cType) {
 	case 'A':
-		char s[2];
-		s[0] = commandP->receiveBuffer[1];
-		s[1] = '\0';
-		noArrowsLeft = atoi(s);
-		if (noArrowsLeft > 0) {
-			_status.numberOfArrows = noArrowsLeft;
-		} else {
-			_status.numberOfArrows =
-					digitalRead((unsigned char) ARROWS_THREE) == HIGH ? 3 : 6;
+		if (_status.sequenceIsRunning) {
+			char s[2];
+			s[0] = commandP->receiveBuffer[1];
+			s[1] = '\0';
+			noArrowsLeft = atoi(s);
+			if (noArrowsLeft > 0) {
+				_status.numberOfArrows = noArrowsLeft;
+			} else {
+				_status.numberOfArrows =
+						digitalRead((unsigned char) ARROWS_THREE) == HIGH ?
+								3 : 6;
+			}
 		}
 		break;
 	case 'S':
@@ -213,7 +216,7 @@ void doCommand(struct Command * commandP) {
 		break;
 	case 'R':
 		_status.sequenceIsRunning = commandP->receiveBuffer[1] == '1';
-		if (!_status.sequenceIsRunning) {
+		if (commandP->receiveBuffer[1] == '0') {
 			setDefaultNumberOfArrows();
 		}
 		break;

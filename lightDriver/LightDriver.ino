@@ -1,9 +1,7 @@
-/*-----( Import needed libraries )-----*/
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include "ReceivingCommand.h"
 
-/*-----( Declare Constants and Pin Numbers )-----*/
 #define RedPinOut       2
 #define YellowPinOut    3
 #define GreenPinOut     4
@@ -29,7 +27,7 @@
 SoftwareSerial _rs485Serial(SSerialRX, SSerialTX); // RX, TX
 
 enum SequenceState {
-	NONE, RUNNING, INTERRUPTED, PAUSED, FINISHED
+	NONE, RUNNING, PAUSED, FINISHED
 };
 
 struct Sequence {
@@ -181,6 +179,9 @@ void loop() {
 
 void sendMessages(struct Sequence *sequence) {
 	bool periodicStatusPulse = _t - _timeOfLastStatus > 2000;
+	if (periodicStatusPulse){
+		Serial.print("       Periodic status pulse");
+	}
 	if (periodicStatusPulse) {
 		_timeOfLastStatus = _t;
 	}
@@ -283,12 +284,15 @@ void sendIsShootingStatus(Sequence *sequenceP) {
 void sendRunningStatus(Sequence *sequenceP) {
 	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write('R');
-	if (sequenceP->state == RUNNING) {
+	if (sequenceP->state == FINISHED || sequenceP->state == NONE){
+		Serial.println("### Send message ### R0 (sequence is not running)");
+		_rs485Serial.write('0');
+	}else if (sequenceP->state == RUNNING) {
 		_rs485Serial.write('1');
 		Serial.println("### Send message ### R1 (sequence running)");
-	} else {
-		_rs485Serial.write('0');
-		Serial.println("### Send message ### R0 (sequence not running)");
+	} else if (sequenceP->state == PAUSED){
+		_rs485Serial.write('P');
+		Serial.println("### Send message ### RP (sequence paused)");
 	}
 	_rs485Serial.write((unsigned char) '\0');
 	digitalWrite(SSerialTxControl, RECEIVE);
