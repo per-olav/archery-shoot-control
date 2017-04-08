@@ -15,8 +15,8 @@
 #define SSerialRX        10  //Serial Receive pin
 #define SSerialTX        11  //Serial Transmit pin
 
-#define RS485Transmit   	HIGH
-#define RS485Receive     	LOW
+#define TRANSMIT   			HIGH
+#define RECEIVE     		LOW
 #define MAX_MESSAGE_LENGTH 	32
 #define MAX_COMMAND_LENGTH 	8
 #define MAX_SEQUENCE_SIZE  	128
@@ -28,24 +28,9 @@
 
 SoftwareSerial _rs485Serial(SSerialRX, SSerialTX); // RX, TX
 
-/*
- enum CommandState {
- EMPTY, RECEIVING, NEW_RECEIVED
- };
- */
-
 enum SequenceState {
 	NONE, RUNNING, INTERRUPTED, PAUSED, FINISHED
 };
-
-/*
- struct Command {
- enum CommandState state = EMPTY;
- int byteCounter = 0;
- char receiveBuffer[MAX_COMMAND_LENGTH] = "";
- unsigned long startReceivingTime;
- };
- */
 
 struct Sequence {
 	enum SequenceState state = NONE;
@@ -74,32 +59,6 @@ struct Sound {
 	boolean sounding = false;
 	unsigned long startTime = 0;
 };
-
-// Method signatures
-void updateTimes(struct Sequence *);
-void updateCommand(struct Command *);
-void resetCommand(struct Command *);
-void doCommand(struct Command *, struct Sequence *);
-void doRecord(char *);
-void updateSound();
-void updateSequence(struct Sequence *);
-void printSequence(struct Sequence *);
-void interruptSequenceRecord(struct Sequence *);
-void setABCD(struct Command *);
-void setLight(struct Command *);
-void startSoundSignal(struct Command *);
-void startSoundSignal(int noSignals);
-void resetToDefault();
-void doPause(struct Sequence *);
-void doContinue(struct Sequence *);
-char* getRecord(struct Sequence *);
-long getRecordDuration(char *record);
-void greenLightOn();
-void yellowLightOn();
-void redLightOn();
-void lightsOff();
-void endSequence();
-void switchABCD();
 
 struct Command _command;
 struct Sequence _sequence;
@@ -165,6 +124,7 @@ bool _lightABIsOn = true;
 unsigned long _dt;
 unsigned long _tPrev;
 unsigned long _t;
+unsigned long _timeOfLastStatus;
 
 void setup() {
 	_command.state = EMPTY;
@@ -190,12 +150,13 @@ void setup() {
 	_sequence.changedABCDPulse = true;
 
 	digitalWrite(SoundPinOut, OFF);
-	digitalWrite(SSerialTxControl, RS485Receive);  // Init Transceiver
+	digitalWrite(SSerialTxControl, RECEIVE);  // Init Transceiver
 
 	// Start the software serial port, to another device
 	_rs485Serial.begin(4800);   // set the data rate
 
 	_t = millis();
+	_timeOfLastStatus = _t;
 	redLightOn();
 }
 
@@ -219,94 +180,118 @@ void loop() {
 }
 
 void sendMessages(struct Sequence *sequence) {
-	// Arrows left message
-	if (sequence->noArrowsChangedPulse) {
-		sequence->noArrowsChangedPulse = false;
-		char s[2];
-		s[1] = '\0';
-		sprintf(s, "%d", sequence->noArrowsLeft);
-		digitalWrite(SSerialTxControl, RS485Transmit);
-		_rs485Serial.write('A');
-		_rs485Serial.write(s[0]);
-		_rs485Serial.write((unsigned char) '\0');
-		digitalWrite(SSerialTxControl, RS485Receive);
-		Serial.print("### Send message ### A");
-		Serial.print(s[0]);
-		Serial.println(" (number of arrows left)");
+	bool periodicStatusPulse = _t - _timeOfLastStatus > 2000;
+	if (periodicStatusPulse) {
+		_timeOfLastStatus = _t;
 	}
 
 	// Time count down message
-	if (sequence->timeShootingCountdownSecondsChangedPulse) {
+	if (periodicStatusPulse || sequence->timeShootingCountdownSecondsChangedPulse) {
 		sequence->timeShootingCountdownSecondsChangedPulse = false;
-		int t = sequence->timeShootingCountdownSeconds;
-		t = t < 0 ? 0 : t;
-		t = t > 240 ? 240 : t;
-		char s[4];
-		s[3] = '\0';
-		sprintf(s, "%03d", sequence->timeShootingCountdownSeconds);
-		digitalWrite(SSerialTxControl, RS485Transmit);
-		_rs485Serial.write('T');
-		_rs485Serial.write(s[0]);
-		_rs485Serial.write(s[1]);
-		_rs485Serial.write(s[2]);
-		_rs485Serial.write((unsigned char) '\0');
-		digitalWrite(SSerialTxControl, RS485Receive);
-		Serial.print("### Send message ### T");
-		Serial.print(s);
-		Serial.print(" (time count down seconds) ");
-		Serial.print(_sequence.timeRunningSequence);
-		Serial.print("  ");
-		Serial.println(_sequence.timeShootingCountdown);
+		sendTimeCountdown(sequence);
+	}
+
+	// Arrows left message
+	if (periodicStatusPulse || sequence->noArrowsChangedPulse) {
+		sequence->noArrowsChangedPulse = false;
+		sendNumberOfArrowsLeft(sequence);
 	}
 
 	// Changed AB/CD message
 	if (sequence->changedABCDPulse) {
 		sequence->changedABCDPulse = false;
-		digitalWrite(SSerialTxControl, RS485Transmit);
-		_rs485Serial.write('a');
-		if (_lightABIsOn) {
-			Serial.println("### Send message ### a1 (AB) ");
-			_rs485Serial.write('1');
-		} else {
-			Serial.println("### Send message ### a2 (CD) ");
-			_rs485Serial.write('2');
-		}
-		_rs485Serial.write((unsigned char) '\0');
-		digitalWrite(SSerialTxControl, RS485Receive);
+		sendABCDStatus();
 	}
 
 	// Is shooting change message
-	if (sequence->isShootingChangedPulse) {
+	if (periodicStatusPulse || sequence->isShootingChangedPulse) {
 		sequence->isShootingChangedPulse = false;
-		digitalWrite(SSerialTxControl, RS485Transmit);
-		_rs485Serial.write('S');
-		if (sequence->isShooting) {
-			_rs485Serial.write('1');
-			Serial.println("### Send message ### S1 (is shooting)");
-		} else {
-			_rs485Serial.write('0');
-			Serial.println("### Send message ### S0 (is not shooting)");
-		}
-		_rs485Serial.write((unsigned char) '\0');
-		digitalWrite(SSerialTxControl, RS485Receive);
+		sendIsShootingStatus(sequence);
 	}
 
 	// Sequence running change message
-	if (sequence->sequenceIsRunningChangedPulse) {
+	if (periodicStatusPulse || sequence->sequenceIsRunningChangedPulse) {
 		sequence->sequenceIsRunningChangedPulse = false;
-		digitalWrite(SSerialTxControl, RS485Transmit);
-		digitalWrite(SSerialTxControl, RS485Transmit);
-		_rs485Serial.write('R');
-		if (sequence->state == RUNNING) {
-			_rs485Serial.write('1');
-			Serial.println("### Send message ### R1 (sequence running)");
-		} else {
-			_rs485Serial.write('0');
-			Serial.println("### Send message ### R0 (sequence not running)");
-		}
-		_rs485Serial.write((unsigned char) '\0');
-		digitalWrite(SSerialTxControl, RS485Receive);
+		sendRunningStatus(sequence);
 	}
+}
+
+void sendTimeCountdown(Sequence *sequenceP){
+	int t = sequenceP->timeShootingCountdownSeconds;
+	t = t < 0 ? 0 : t;
+	t = t > 240 ? 240 : t;
+	char s[4];
+	s[3] = '\0';
+	sprintf(s, "%03d", sequenceP->timeShootingCountdownSeconds);
+	digitalWrite(SSerialTxControl, TRANSMIT);
+	_rs485Serial.write('T');
+	_rs485Serial.write(s[0]);
+	_rs485Serial.write(s[1]);
+	_rs485Serial.write(s[2]);
+	_rs485Serial.write((unsigned char) '\0');
+	digitalWrite(SSerialTxControl, RECEIVE);
+	Serial.print("### Send message ### T");
+	Serial.print(s);
+	Serial.print(" (time count down seconds) ");
+	Serial.print(_sequence.timeRunningSequence);
+	Serial.print("  ");
+	Serial.println(_sequence.timeShootingCountdown);
+}
+
+void sendNumberOfArrowsLeft(Sequence *sequenceP) {
+	char s[2];
+	s[1] = '\0';
+	sprintf(s, "%d", sequenceP->noArrowsLeft);
+	digitalWrite(SSerialTxControl, TRANSMIT);
+	_rs485Serial.write('A');
+	_rs485Serial.write(s[0]);
+	_rs485Serial.write((unsigned char) '\0');
+	digitalWrite(SSerialTxControl, RECEIVE);
+	Serial.print("### Send message ### A");
+	Serial.print(s[0]);
+	Serial.println(" (number of arrows left)");
+}
+
+void sendABCDStatus() {
+	digitalWrite(SSerialTxControl, TRANSMIT);
+	_rs485Serial.write('a');
+	if (_lightABIsOn) {
+		Serial.println("### Send message ### a1 (AB) ");
+		_rs485Serial.write('1');
+	} else {
+		Serial.println("### Send message ### a2 (CD) ");
+		_rs485Serial.write('2');
+	}
+	_rs485Serial.write((unsigned char) '\0');
+	digitalWrite(SSerialTxControl, RECEIVE);
+}
+
+void sendIsShootingStatus(Sequence *sequenceP) {
+	digitalWrite(SSerialTxControl, TRANSMIT);
+	_rs485Serial.write('S');
+	if (sequenceP->isShooting) {
+		_rs485Serial.write('1');
+		Serial.println("### Send message ### S1 (is shooting)");
+	} else {
+		_rs485Serial.write('0');
+		Serial.println("### Send message ### S0 (is not shooting)");
+	}
+	_rs485Serial.write((unsigned char) '\0');
+	digitalWrite(SSerialTxControl, RECEIVE);
+}
+
+void sendRunningStatus(Sequence *sequenceP) {
+	digitalWrite(SSerialTxControl, TRANSMIT);
+	_rs485Serial.write('R');
+	if (sequenceP->state == RUNNING) {
+		_rs485Serial.write('1');
+		Serial.println("### Send message ### R1 (sequence running)");
+	} else {
+		_rs485Serial.write('0');
+		Serial.println("### Send message ### R0 (sequence not running)");
+	}
+	_rs485Serial.write((unsigned char) '\0');
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void updateTimes(struct Sequence *sequenceP) {

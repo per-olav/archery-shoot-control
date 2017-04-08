@@ -6,8 +6,8 @@
 #define SSerialTX        11  //Serial Transmit pin
 
 #define SSerialTxControl 9   //RS485 Direction control
-#define RS485Transmit    HIGH
-#define RS485Receive     LOW
+#define TRANSMIT    HIGH
+#define RECEIVE     LOW
 
 #define ArrowLedPinStart 3
 #define ArrowLedPinEnd 8
@@ -106,7 +106,7 @@ void setup() {
 
 	pinMode(SSerialTxControl, OUTPUT);
 
-	digitalWrite(SSerialTxControl, RS485Receive);  // Init Transceiver
+	digitalWrite(SSerialTxControl, RECEIVE);  // Init Transceiver
 
 	// Start the software serial port, to another device
 	_rs485Serial.begin(4800);   // set the data rate
@@ -288,7 +288,7 @@ void performAction(int buttonPushed) {
 }
 
 void changeABCD() {
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	if (_status.abcdLight == AB) {
 		_status.abcdLight = CD;
 		_rs485Serial.write("A2");
@@ -300,7 +300,7 @@ void changeABCD() {
 		_rs485Serial.write((unsigned char) '\0');
 		Serial.println("Sends command A1");
 	}
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void decreaseNoArrows() {
@@ -322,42 +322,42 @@ void setDefaultNumberOfArrows() {
 
 void sendResetSequence() {
 	// "R": Reset to default (red light)
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("R");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendGreenLightOn() {
 // "LGREEN": Green light on only
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("LGREEN");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendYellowLightOn() {
 // "LYELLO": Yellow light on only
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("LYELLO");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendRedLightOn() {
 // "LRED": Red light on only
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("LRED");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendSoundSignal() {
 // "ZN": N sound signals
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("Z1");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendStartSequence() {
@@ -386,25 +386,25 @@ void sendStartSequence() {
 	Serial.print("Send sequence command: ");
 	Serial.println(sequenceCommand);
 
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write(sequenceCommand);
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendPauseSequence() {
 // "P": Pause
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("P");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
 void sendStopSequence() {
 // "I": Interrupt
-	digitalWrite(SSerialTxControl, RS485Transmit);
+	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write("I");
 	_rs485Serial.write((unsigned char) '\0');
-	digitalWrite(SSerialTxControl, RS485Receive);
+	digitalWrite(SSerialTxControl, RECEIVE);
 
 	if (digitalRead((unsigned char) ARROWS_THREE) == HIGH) {
 		_status.numberOfArrows = 3;
