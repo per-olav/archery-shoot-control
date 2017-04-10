@@ -24,6 +24,7 @@
 #define ON 				 	LOW
 #define OFF 			 	HIGH
 
+#define PERIODIC_PULSE_INTERVAL 1000
 SoftwareSerial _rs485Serial(SSerialRX, SSerialTX); // RX, TX
 
 enum SequenceState {
@@ -183,10 +184,7 @@ void loop() {
 }
 
 void sendMessages(struct Sequence *sequence) {
-	bool periodicStatusPulse = _t - _timeOfLastStatus > 1000;
-	if (periodicStatusPulse) {
-		Serial.print("       Periodic status pulse");
-	}
+	bool periodicStatusPulse = _t - _timeOfLastStatus > PERIODIC_PULSE_INTERVAL;
 	if (periodicStatusPulse) {
 		_timeOfLastStatus = _t;
 	}
@@ -237,12 +235,9 @@ void sendTimeCountdown(Sequence *sequenceP) {
 	_rs485Serial.write(s[2]);
 	_rs485Serial.write((unsigned char) '\0');
 	digitalWrite(SSerialTxControl, RECEIVE);
-	Serial.print("### Send message ### T");
+	Serial.print("Send T");
 	Serial.print(s);
 	Serial.print(" (time count down seconds) ");
-	Serial.print(_sequence.timeRunningSequence);
-	Serial.print("  ");
-	Serial.println(_sequence.timeShootingCountdown);
 }
 
 void sendNumberOfArrowsLeft(Sequence *sequenceP) {
@@ -254,7 +249,7 @@ void sendNumberOfArrowsLeft(Sequence *sequenceP) {
 	_rs485Serial.write(s[0]);
 	_rs485Serial.write((unsigned char) '\0');
 	digitalWrite(SSerialTxControl, RECEIVE);
-	Serial.print("### Send message ### A");
+	Serial.print("Send A");
 	Serial.print(s[0]);
 	Serial.println(" (number of arrows left)");
 }
@@ -263,10 +258,10 @@ void sendABCDStatus() {
 	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write('a');
 	if (_lightABIsOn) {
-		Serial.println("### Send message ### a1 (AB) ");
+		Serial.println("Send a1 (AB) ");
 		_rs485Serial.write('1');
 	} else {
-		Serial.println("### Send message ### a2 (CD) ");
+		Serial.println("Send a2 (CD) ");
 		_rs485Serial.write('2');
 	}
 	_rs485Serial.write((unsigned char) '\0');
@@ -278,10 +273,10 @@ void sendIsShootingStatus(Sequence *sequenceP) {
 	_rs485Serial.write('S');
 	if (sequenceP->isShooting) {
 		_rs485Serial.write('1');
-		Serial.println("### Send message ### S1 (is shooting)");
+		Serial.println("Send S1 (is shooting)");
 	} else {
 		_rs485Serial.write('0');
-		Serial.println("### Send message ### S0 (is not shooting)");
+		Serial.println("Send S0 (is not shooting)");
 	}
 	_rs485Serial.write((unsigned char) '\0');
 	digitalWrite(SSerialTxControl, RECEIVE);
@@ -291,14 +286,14 @@ void sendRunningStatus(Sequence *sequenceP) {
 	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write('R');
 	if (sequenceP->state == FINISHED || sequenceP->state == NONE) {
-		Serial.println("### Send message ### R0 (sequence is not running)");
+		Serial.println("Send R0 (sequence is not running)");
 		_rs485Serial.write('0');
 	} else if (sequenceP->state == RUNNING) {
 		_rs485Serial.write('1');
-		Serial.println("### Send message ### R1 (sequence running)");
+		Serial.println("Send R1 (sequence running)");
 	} else if (sequenceP->state == PAUSED) {
 		_rs485Serial.write('P');
-		Serial.println("### Send message ### RP (sequence paused)");
+		Serial.println("Send RP (sequence paused)");
 	}
 	_rs485Serial.write((unsigned char) '\0');
 	digitalWrite(SSerialTxControl, RECEIVE);
