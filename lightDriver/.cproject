@@ -23,7 +23,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/core/variant}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/SoftwareSerial}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/SoftwareSerial/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/FastLED}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.1042397356" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
 							</tool>
@@ -33,7 +32,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/core/variant}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/SoftwareSerial}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/SoftwareSerial/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/FastLED}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.1680824337" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -43,7 +41,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/core/variant}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/SoftwareSerial}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/SoftwareSerial/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lightDriver/libraries/FastLED}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1051252789" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>

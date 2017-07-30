@@ -189,6 +189,13 @@ void sendMessages(struct Sequence *sequence) {
 		_timeOfLastStatus = _t;
 	}
 
+	// Waiting time count down message
+	if (periodicStatusPulse
+			|| sequence->timeWaitingCountdownSecondsChangedPulse) {
+		sequence->timeWaitingCountdownSecondsChangedPulse = false;
+		sendWaitingCountdown(sequence);
+	}
+
 	// Time count down message
 	if (periodicStatusPulse
 			|| sequence->timeShootingCountdownSecondsChangedPulse) {
@@ -234,10 +241,30 @@ void sendTimeCountdown(Sequence *sequenceP) {
 	_rs485Serial.write(s[1]);
 	_rs485Serial.write(s[2]);
 	_rs485Serial.write((unsigned char) '\0');
+
 	digitalWrite(SSerialTxControl, RECEIVE);
 	Serial.print("Send T");
 	Serial.print(s);
-	Serial.print(" (time count down seconds) ");
+	Serial.println(" (time count down seconds) ");
+}
+
+void sendWaitingCountdown(Sequence *sequenceP) {
+	int t = sequenceP->timeWaitingCountdownSeconds;
+	t = t < 0 ? 0 : t;
+	t = t > 30 ? 30 : t;
+	char s[3];
+	s[2] = '\0';
+	sprintf(s, "%02d", sequenceP->timeWaitingCountdownSeconds);
+	digitalWrite(SSerialTxControl, TRANSMIT);
+	_rs485Serial.write('W');
+	_rs485Serial.write(s[0]);
+	_rs485Serial.write(s[1]);
+	_rs485Serial.write((unsigned char) '\0');
+
+	digitalWrite(SSerialTxControl, RECEIVE);
+	Serial.print("Send W");
+	Serial.print(s);
+	Serial.println(" (waiting time count down seconds) ");
 }
 
 void sendNumberOfArrowsLeft(Sequence *sequenceP) {
@@ -313,12 +340,14 @@ void updateTimes(struct Sequence *sequenceP) {
 	}
 	if (sequenceP->isInWaitingCountdown) {
 		sequenceP->timeWaitingCountdown -= (long) _dt;
+	}else{
+		sequenceP->timeWaitingCountdown = 0;
 	}
 }
 
 void updateCommand(struct Command *cP) {
 
-	if (millis() - cP->startReceivingTime > 200) {
+	if (millis() - cP->startReceivingTime > 400) {
 		resetCommand(cP);
 	}
 
@@ -327,7 +356,6 @@ void updateCommand(struct Command *cP) {
 	}
 
 	char byteReceived = (char) _rs485Serial.read();
-
 	++cP->byteCounter;
 	if (cP->byteCounter == 1) {
 		cP->startReceivingTime = millis();
@@ -386,6 +414,17 @@ void updateSequence(struct Sequence *sequenceP) {
 			!= sequenceP->timeShootingCountdownSeconds;
 	sequenceP->timeShootingCountdownSeconds = tCountdownSec;
 
+	// Waiting count down update
+	int tWaitCountdownSec = sequenceP->timeWaitingCountdown / 1000 + 1;
+	int maxWaitTime = 10;
+	tWaitCountdownSec =
+			tWaitCountdownSec > maxWaitTime ? maxWaitTime : tWaitCountdownSec;
+	tWaitCountdownSec =
+			sequenceP->timeWaitingCountdown <= 0 ? 0 : tWaitCountdownSec;
+	sequenceP->timeWaitingCountdownSecondsChangedPulse = tWaitCountdownSec
+			!= sequenceP->timeWaitingCountdownSeconds;
+	sequenceP->timeWaitingCountdownSeconds = tWaitCountdownSec;
+
 	// Number of arrows left update
 	int noArrowsLeft = (sequenceP->timeShootingCountdownSeconds - 1) / 40 + 1;
 	noArrowsLeft =
@@ -427,6 +466,7 @@ void doRecord(char* record) {
 	case 'G':
 		_sequence.isShootingChangedPulse = !_sequence.isShooting;
 		_sequence.isShooting = true;
+		_sequence.isInWaitingCountdown = false;
 		greenLightOn();
 		break;
 	case 'Y':
@@ -442,7 +482,8 @@ void doRecord(char* record) {
 		_sequence.isShootingChangedPulse = _sequence.isShooting;
 		_sequence.isShooting = false;
 		_sequence.timeShootingCountdown = _sequence.arrowsToShoot * 40e3;
-		_sequence.timeWaitingCountdown = getRecordDuration(record);
+		_sequence.timeWaitingCountdown = getRecordDuration(record) * 1000;
+		_sequence.isInWaitingCountdown = true;
 		break;
 	case 'S':
 		switchABCD();
@@ -453,8 +494,6 @@ void doRecord(char* record) {
 	case 'Z':
 		endSequence();
 	}
-
-	_sequence.isInWaitingCountdown = task == 'r';
 }
 
 void switchABCD() {
@@ -707,6 +746,6 @@ void resetToDefault() {
 	_sequence.timeWaitingCountdown = 0;
 	_sequence.timeWaitingCountdownSeconds = 0;
 	_sequence.timeWaitingCountdownSecondsChangedPulse = true;
-
+	_sequence.isInWaitingCountdown = false;
 	_sequence.shootingPaused = false;
 }

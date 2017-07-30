@@ -201,7 +201,7 @@ void doCommand(struct Command * commandP) {
 		break;
 	case 'R':
 		_status.sequenceIsRunning = commandP->receiveBuffer[1] == '1';
-		if (_status.sequenceIsRunning){
+		if (_status.sequenceIsRunning) {
 			_manuallySetNumberOfArrows = false;
 		}
 		if (commandP->receiveBuffer[1] == '0' && !_manuallySetNumberOfArrows) {
@@ -380,6 +380,8 @@ void sendStartSequence() {
 
 	digitalWrite(SSerialTxControl, TRANSMIT);
 	_rs485Serial.write(sequenceCommand);
+	_rs485Serial.write((unsigned char) '\0');
+
 	digitalWrite(SSerialTxControl, RECEIVE);
 }
 
@@ -407,7 +409,7 @@ void sendStopSequence() {
 
 void updateCommand(struct Command *cP, SoftwareSerial *rs485SerialP) {
 
-	if (millis() - cP->startReceivingTime > 200) {
+	if (millis() - cP->startReceivingTime > 400) {
 		resetCommand(cP);
 	}
 
