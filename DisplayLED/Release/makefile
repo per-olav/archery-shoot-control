@@ -51,7 +51,7 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 AR += \
-C:\Users\per-olavr\git\DisplayLED\Release\arduino.ar \
+C:\Users\per-olavr\git\archery-shoot-control\DisplayLED\Release\arduino.ar \
 
 ELF += \
 DisplayLED.elf \
@@ -67,19 +67,19 @@ all: DisplayLED
 DisplayLED: $(HEX)
 	@echo 'Building target: $@'
 	@echo 'Printing size:'
-	"C:\eclipse-neon\eclipse\/arduinoPlugin/packages/arduino/tools/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin/avr-size" -A "C:/Users/per-olavr/git/DisplayLED/Release/DisplayLED.elf"
+	"C:\eclipse-neon\eclipse\/arduinoPlugin/packages/arduino/tools/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin/avr-size" -A "C:/Users/per-olavr/git/archery-shoot-control/DisplayLED/Release/DisplayLED.elf"
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-C:\Users\per-olavr\git\DisplayLED\Release\arduino.ar: $(AR_OBJ)
+C:\Users\per-olavr\git\archery-shoot-control\DisplayLED\Release\arduino.ar: $(AR_OBJ)
 	@echo 'Starting archiver'
-	"C:\eclipse-neon\eclipse\/arduinoPlugin/packages/arduino/tools/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin/avr-gcc-ar" rcs    C:/Users/per-olavr/git/DisplayLED/Release/arduino.ar $(AR_OBJ)
+	"C:\eclipse-neon\eclipse\/arduinoPlugin/packages/arduino/tools/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin/avr-gcc-ar" rcs    C:/Users/per-olavr/git/archery-shoot-control/DisplayLED/Release/arduino.ar $(AR_OBJ)
 	@echo 'Finished building: $@'
 	@echo ' '
 
 DisplayLED.elf: $(LINK_OBJ) $(AR)
 	@echo 'Starting combiner'
-	"C:\eclipse-neon\eclipse\/arduinoPlugin/packages/arduino/tools/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin/avr-gcc" -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections -mmcu=atmega328p -o "C:\Users\per-olavr\git\DisplayLED/Release/DisplayLED.elf"   $(LINK_OBJ) $(AR)   C:/Users/per-olavr/git/DisplayLED/Release/arduino.ar  "-LC:\Users\per-olavr\git\DisplayLED/Release" -lm
+	"C:\eclipse-neon\eclipse\/arduinoPlugin/packages/arduino/tools/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin/avr-gcc" -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections -mmcu=atmega328p -o "C:\Users\per-olavr\git\archery-shoot-control\DisplayLED/Release/DisplayLED.elf"   $(LINK_OBJ) $(AR)   C:/Users/per-olavr/git/archery-shoot-control/DisplayLED/Release/arduino.ar  "-LC:\Users\per-olavr\git\archery-shoot-control\DisplayLED/Release" -lm
 	@echo 'Finished building: $@'
 	@echo ' '
 
