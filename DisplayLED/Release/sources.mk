@@ -38,5 +38,6 @@ SUBDIRS := \
 . \
 core/core \
 libraries/FastLED \
+libraries/LEDMatrix \
 libraries/SoftwareSerial/src \
 

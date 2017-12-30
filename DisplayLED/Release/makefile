@@ -10,6 +10,7 @@ RM := del
 -include sources.mk
 -include subdir.mk
 -include libraries\SoftwareSerial\src\subdir.mk
+-include libraries\LEDMatrix\subdir.mk
 -include libraries\FastLED\subdir.mk
 -include core\core\subdir.mk
 -include objects.mk
