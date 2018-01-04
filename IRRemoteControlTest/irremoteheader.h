@@ -1,6 +1,6 @@
 #ifndef IRREMOTE_H
 #define IRREMOTE_H
-
+int keyesRemoteReceived(IRrecv irrecv,decode_results results);
 long const ZERO_0 = 0x1BC0157B;
 long const ONE_1 = 0xC101E57B;
 long const TWO_2 = 0x97483BFB;

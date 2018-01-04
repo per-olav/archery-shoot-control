@@ -1,4 +1,10 @@
-int keyesRemoteReceived(){
+#include <IRremote.h>
+#include "irremoteheader.h"
+#include <SoftwareSerial.h>
+
+
+
+int keyesRemoteReceived(IRrecv irrecv,decode_results results){
 	int key = -1;
 	if (irrecv.decode(&results)) {
 		long val = results.value;

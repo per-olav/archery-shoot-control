@@ -1,9 +1,12 @@
 #include <IRremote.h>
+
+
 #include "irremoteheader.h"
 
-int const RECV_PIN = 11;
 
-IRrecv irrecv(RECV_PIN);
+//int const RECV_PIN = 11;
+
+IRrecv irrecv(11);
 
 decode_results results;
 
@@ -16,11 +19,10 @@ void setup()
 }
 
 void loop() {
-	int key = keyesRemoteReceived();
+	int key = keyesRemoteReceived(irrecv, results);
 	if (key >= 0){
 		Serial.println(key);
 	}
 	delay(100);
 }
-
 
